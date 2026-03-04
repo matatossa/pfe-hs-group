@@ -1,0 +1,14 @@
+C:\Users\MSI\Desktop\pfe\projet 1 securite vunerabilite avec nist\projet-microser\rss-collector-service\src\main\java\com\security\platform\rsscollector\RssCollectorServiceApplication.java
+C:\Users\MSI\Desktop\pfe\projet 1 securite vunerabilite avec nist\projet-microser\rss-collector-service\src\main\java\com\security\platform\rsscollector\kafka\FeedItemProducer.java
+C:\Users\MSI\Desktop\pfe\projet 1 securite vunerabilite avec nist\projet-microser\rss-collector-service\src\main\java\com\security\platform\rsscollector\service\RssParserService.java
+C:\Users\MSI\Desktop\pfe\projet 1 securite vunerabilite avec nist\projet-microser\rss-collector-service\src\main\java\com\security\platform\rsscollector\controller\RssCollectorController.java
+C:\Users\MSI\Desktop\pfe\projet 1 securite vunerabilite avec nist\projet-microser\rss-collector-service\src\main\java\com\security\platform\rsscollector\repository\RawFeedEntryRepository.java
+C:\Users\MSI\Desktop\pfe\projet 1 securite vunerabilite avec nist\projet-microser\rss-collector-service\src\main\java\com\security\platform\rsscollector\entity\FeedSource.java
+C:\Users\MSI\Desktop\pfe\projet 1 securite vunerabilite avec nist\projet-microser\rss-collector-service\src\main\java\com\security\platform\rsscollector\service\FeedCollectorService.java
+C:\Users\MSI\Desktop\pfe\projet 1 securite vunerabilite avec nist\projet-microser\rss-collector-service\src\main\java\com\security\platform\rsscollector\dto\CollectionStatusDTO.java
+C:\Users\MSI\Desktop\pfe\projet 1 securite vunerabilite avec nist\projet-microser\rss-collector-service\src\main\java\com\security\platform\rsscollector\config\KafkaProducerConfig.java
+C:\Users\MSI\Desktop\pfe\projet 1 securite vunerabilite avec nist\projet-microser\rss-collector-service\src\main\java\com\security\platform\rsscollector\dto\FeedItemDTO.java
+C:\Users\MSI\Desktop\pfe\projet 1 securite vunerabilite avec nist\projet-microser\rss-collector-service\src\main\java\com\security\platform\rsscollector\entity\RawFeedEntry.java
+C:\Users\MSI\Desktop\pfe\projet 1 securite vunerabilite avec nist\projet-microser\rss-collector-service\src\main\java\com\security\platform\rsscollector\repository\FeedSourceRepository.java
+C:\Users\MSI\Desktop\pfe\projet 1 securite vunerabilite avec nist\projet-microser\rss-collector-service\src\main\java\com\security\platform\rsscollector\client\NormalizationClient.java
+C:\Users\MSI\Desktop\pfe\projet 1 securite vunerabilite avec nist\projet-microser\rss-collector-service\src\main\java\com\security\platform\rsscollector\config\WebClientConfig.java

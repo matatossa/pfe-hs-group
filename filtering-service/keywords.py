@@ -101,22 +101,22 @@ KEYWORD_ONTOLOGY = {
         "active directory", "iis", "internet information services",
         "windows domain controller"
     ],
-    "pfSense": [
-        "pfsense", "pfSense", "netgate pfsense", "pfsense firewall",
-        "pfsense router"
-    ],
     "OpenVPN": [
         "openvpn", "open vpn", "openvpn access server",
         "openvpn community", "openvpn connect"
     ],
-    "Sophos": [
-        "sophos", "sophos antivirus", "sophos firewall", "sophos xg",
-        "sophos intercept x", "sophos endpoint", "sophos central"
+
+    # ── New products from CERT-FR / Cyber.gc.ca feeds ──────────────────
+    "Cisco": [
+        "cisco", "cisco ios", "cisco nx-os", "cisco asa", "cisco firepower",
+        "cisco catalyst", "cisco sd-wan", "cisco webex", "cisco anyconnect",
+        "cisco umbrella", "cisco meraki", "cisco jabber", "cisco rv",
+        "cisco prime", "cisco secure", "cisco unity", "cisco telepresence"
     ],
-    "Kaspersky": [
-        "kaspersky", "kaspersky security", "kaspersky antivirus",
-        "kaspersky endpoint", "kaspersky lab", "kaspersky internet security",
-        "kaspersky total security"
+    "VMware": [
+        "vmware", "vsphere", "vcenter", "esxi", "vmware horizon",
+        "vmware workstation", "vmware fusion", "vmware nsx",
+        "vmware aria", "vmware tanzu", "vmware tools"
     ],
 }
 
@@ -135,7 +135,6 @@ PRODUCT_ALIASES = {
     "sharepoint": "Microsoft Office",
     "keepass": "Keepass2",
     "chatgpt": "OpenAI",
-    "pfsense": "pfSense",
     "axapta": "Microsoft AX 2012",
     "almalinux": "ALMA",
 }

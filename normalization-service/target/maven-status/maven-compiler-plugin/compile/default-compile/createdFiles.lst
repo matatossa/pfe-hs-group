@@ -1,0 +1,15 @@
+com\security\platform\normalization\client\FilteringClient.class
+com\security\platform\normalization\kafka\FeedItemConsumer.class
+com\security\platform\normalization\dto\FilterResultDTO$FilterResultDTOBuilder.class
+com\security\platform\normalization\dto\FeedItemDTO$FeedItemDTOBuilder.class
+com\security\platform\normalization\repository\VulnerabilityRepository.class
+com\security\platform\normalization\dto\FeedItemDTO.class
+com\security\platform\normalization\dto\FilterResultDTO.class
+com\security\platform\normalization\entity\Vulnerability.class
+com\security\platform\normalization\controller\NormalizationController.class
+com\security\platform\normalization\NormalizationServiceApplication.class
+com\security\platform\normalization\entity\Vulnerability$VulnerabilityBuilder.class
+com\security\platform\normalization\config\WebClientConfig.class
+com\security\platform\normalization\kafka\VulnerabilityProducer.class
+com\security\platform\normalization\service\NormalizationService.class
+com\security\platform\normalization\config\KafkaConfig.class
