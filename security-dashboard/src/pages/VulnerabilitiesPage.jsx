@@ -83,13 +83,16 @@ function VulnDetailModal({ vuln, onClose }) {
 }
 
 export default function VulnerabilitiesPage({ toast }) {
-    const [allVulns, setAllVulns] = useState([]);    // full dataset
+    const [allVulns, setAllVulns] = useState([]);
     const [loading, setLoading] = useState(true);
     const [sevFilter, setSevFilter] = useState('ALL');
     const [relevantOnly, setRelOnly] = useState(false);
     const [search, setSearch] = useState('');
     const [selected, setSelected] = useState(null);
     const [stats, setStats] = useState(null);
+    const [productFilter, setProductFilter] = useState('ALL');
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -106,18 +109,37 @@ export default function VulnerabilitiesPage({ toast }) {
 
     useEffect(() => { load(); }, [load]);
 
+    // ── Unique product list for dropdown ──────────────────────────────
+    const productOptions = ['ALL', ...Array.from(
+        new Set(allVulns
+            .map(v => v.product)
+            .filter(p => p && p !== 'Unknown')
+        )).sort()
+    ];
+
     // ── CLIENT-SIDE filtering ──────────────────────────────────────────
     const displayed = allVulns.filter(v => {
         const sev = (v.severity || 'LOW').toUpperCase();
         if (sevFilter !== 'ALL' && sev !== sevFilter) return false;
         if (relevantOnly && !v.isRelevant) return false;
+        if (productFilter !== 'ALL' && v.product !== productFilter) return false;
+        if (dateFrom) {
+            const pub = v.publishedAt ? new Date(v.publishedAt) : null;
+            if (!pub || pub < new Date(dateFrom)) return false;
+        }
+        if (dateTo) {
+            const pub = v.publishedAt ? new Date(v.publishedAt) : null;
+            // add 1 day so "to" is inclusive
+            const to = new Date(dateTo);
+            to.setDate(to.getDate() + 1);
+            if (!pub || pub > to) return false;
+        }
         if (search.trim().length >= 2) {
             const q = search.trim().toLowerCase();
-            const inTitle = v.title?.toLowerCase().includes(q);
-            const inCve = v.cveId?.toLowerCase().includes(q);
-            const inProduct = v.product?.toLowerCase().includes(q);
-            const inSource = v.source?.toLowerCase().includes(q);
-            return inTitle || inCve || inProduct || inSource;
+            return v.title?.toLowerCase().includes(q)
+                || v.cveId?.toLowerCase().includes(q)
+                || v.product?.toLowerCase().includes(q)
+                || v.source?.toLowerCase().includes(q);
         }
         return true;
     });
@@ -170,12 +192,13 @@ export default function VulnerabilitiesPage({ toast }) {
                     />
                 </div>
 
+                {/* ─── Severity chips ─── */}
                 <div className="filter-bar" style={{ margin: 0 }}>
                     {SEVERITY_LEVELS.map(sev => (
                         <button
                             key={sev}
                             className={`filter-chip ${SEV_CHIP_CLASS[sev] || ''} ${sevFilter === sev && !relevantOnly ? 'active' : ''}`}
-                            onClick={() => { setSevFilter(sev); setRelOnly(false); setSearch(''); }}
+                            onClick={() => { setSevFilter(sev); setRelOnly(false); setSearch(''); setProductFilter('ALL'); }}
                         >
                             {sev}
                             {sev !== 'ALL' && counts[sev]
@@ -188,24 +211,76 @@ export default function VulnerabilitiesPage({ toast }) {
                     ))}
                     <button
                         className={`filter-chip ${relevantOnly ? 'active' : ''}`}
-                        onClick={() => { setRelOnly(p => !p); setSevFilter('ALL'); setSearch(''); }}
+                        onClick={() => { setRelOnly(p => !p); setSevFilter('ALL'); setSearch(''); setProductFilter('ALL'); }}
                     >
                         🎯 Relevant only ({allVulns.filter(v => v.isRelevant).length})
                     </button>
                 </div>
 
+                {/* ─── Product dropdown ─── */}
+                <select
+                    value={productFilter}
+                    onChange={e => { setProductFilter(e.target.value); setSevFilter('ALL'); setRelOnly(false); setSearch(''); }}
+                    style={{
+                        background: 'var(--bg-card)', color: productFilter !== 'ALL' ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                        border: `1px solid ${productFilter !== 'ALL' ? 'rgba(88,166,255,0.4)' : 'var(--border-subtle)'}`,
+                        borderRadius: 20, padding: '6px 12px', fontFamily: 'inherit',
+                        fontSize: 12, fontWeight: 500, cursor: 'pointer', outline: 'none',
+                    }}
+                >
+                    {productOptions.map(p => (
+                        <option key={p} value={p} style={{ background: 'var(--bg-secondary)' }}>{p === 'ALL' ? '🏷️ All Products' : p}</option>
+                    ))}
+                </select>
+
+                {/* ─── Date range ─── */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>From</span>
+                    <input
+                        type="date"
+                        value={dateFrom}
+                        onChange={e => setDateFrom(e.target.value)}
+                        style={{
+                            background: 'var(--bg-card)', color: 'var(--text-secondary)',
+                            border: `1px solid ${dateFrom ? 'rgba(88,166,255,0.4)' : 'var(--border-subtle)'}`,
+                            borderRadius: 8, padding: '5px 8px', fontFamily: 'JetBrains Mono, monospace',
+                            fontSize: 11, cursor: 'pointer', outline: 'none',
+                            colorScheme: 'dark',
+                        }}
+                    />
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>To</span>
+                    <input
+                        type="date"
+                        value={dateTo}
+                        min={dateFrom || undefined}
+                        onChange={e => setDateTo(e.target.value)}
+                        style={{
+                            background: 'var(--bg-card)', color: 'var(--text-secondary)',
+                            border: `1px solid ${dateTo ? 'rgba(88,166,255,0.4)' : 'var(--border-subtle)'}`,
+                            borderRadius: 8, padding: '5px 8px', fontFamily: 'JetBrains Mono, monospace',
+                            fontSize: 11, cursor: 'pointer', outline: 'none',
+                            colorScheme: 'dark',
+                        }}
+                    />
+                    {(dateFrom || dateTo) && (
+                        <button onClick={() => { setDateFrom(''); setDateTo(''); }}
+                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 13 }}
+                            title="Clear date filter">✕</button>
+                    )}
+                </div>
+
                 <button className="topbar-btn btn-ghost" style={{ marginLeft: 'auto' }}
-                    onClick={() => { setSearch(''); setSevFilter('ALL'); setRelOnly(false); }}>
+                    onClick={() => { setSearch(''); setSevFilter('ALL'); setRelOnly(false); setProductFilter('ALL'); setDateFrom(''); setDateTo(''); }}>
                     ↺ Reset
                 </button>
-            </div>
+            </div >
 
             {/* ─── Table ────────────────────────────────────────── */}
-            <div className="section-header">
+            < div className="section-header" >
                 <span className="section-title">
                     Vulnerabilities <span className="section-count">{displayed.length}</span>
                 </span>
-            </div>
+            </div >
             <div className="table-container">
                 {loading ? (
                     <div className="loading-spinner"><div className="spinner" /><span>Loading vulnerabilities…</span></div>
@@ -273,6 +348,6 @@ export default function VulnerabilitiesPage({ toast }) {
             </div>
 
             {selected && <VulnDetailModal vuln={selected} onClose={() => setSelected(null)} />}
-        </div>
+        </div >
     );
 }

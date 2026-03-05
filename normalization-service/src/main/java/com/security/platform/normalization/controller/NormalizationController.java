@@ -48,7 +48,7 @@ public class NormalizationController {
      */
     @GetMapping("/vulnerabilities")
     public ResponseEntity<List<Vulnerability>> getAll() {
-        return ResponseEntity.ok(vulnerabilityRepository.findTop50ByOrderByFetchedAtDesc());
+        return ResponseEntity.ok(vulnerabilityRepository.findAllByOrderByPublishedAtDesc());
     }
 
     /**
@@ -56,7 +56,7 @@ public class NormalizationController {
      */
     @GetMapping("/vulnerabilities/relevant")
     public ResponseEntity<List<Vulnerability>> getRelevant() {
-        return ResponseEntity.ok(vulnerabilityRepository.findByIsRelevantTrueOrderByFetchedAtDesc());
+        return ResponseEntity.ok(vulnerabilityRepository.findByIsRelevantTrueOrderByPublishedAtDesc());
     }
 
     /**
@@ -82,7 +82,7 @@ public class NormalizationController {
      */
     @GetMapping("/vulnerabilities/severity/{level}")
     public ResponseEntity<List<Vulnerability>> getBySeverity(@PathVariable String level) {
-        return ResponseEntity.ok(vulnerabilityRepository.findBySeverityOrderByFetchedAtDesc(level.toUpperCase()));
+        return ResponseEntity.ok(vulnerabilityRepository.findBySeverityOrderByPublishedAtDesc(level.toUpperCase()));
     }
 
     /**
@@ -99,7 +99,7 @@ public class NormalizationController {
     @GetMapping("/vulnerabilities/stats")
     public ResponseEntity<Map<String, Object>> getStats() {
         long total = vulnerabilityRepository.count();
-        long relevant = vulnerabilityRepository.findByIsRelevantTrueOrderByFetchedAtDesc().size();
+        long relevant = vulnerabilityRepository.findByIsRelevantTrueOrderByPublishedAtDesc().size();
 
         return ResponseEntity.ok(Map.of(
                 "totalVulnerabilities", total,

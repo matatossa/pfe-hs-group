@@ -222,7 +222,13 @@ public class NormalizationService {
         // 7. CVSS score
         BigDecimal cvssScore = extractCvssScore(item.getTitle() + " " + item.getDescription());
 
-        // 8. Persist
+        // 8. Persist — skip if this URL already exists (deduplication guard)
+        if (item.getUrl() != null && !item.getUrl().isBlank()
+                && vulnerabilityRepository.existsByUrl(item.getUrl())) {
+            log.info("Skipping duplicate vulnerability URL: {}", item.getUrl());
+            return vulnerabilityRepository.findByUrl(item.getUrl()).orElse(null);
+        }
+
         Vulnerability vulnerability = Vulnerability.builder()
                 .source(item.getSource())
                 .product(product)
