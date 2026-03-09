@@ -5,6 +5,7 @@ import com.security.platform.normalization.dto.FeedItemDTO;
 import com.security.platform.normalization.dto.FilterResultDTO;
 import com.security.platform.normalization.entity.Vulnerability;
 import com.security.platform.normalization.kafka.VulnerabilityProducer;
+import com.security.platform.normalization.repository.MonitoredProductRepository;
 import com.security.platform.normalization.repository.VulnerabilityRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,7 @@ public class NormalizationService {
     private final FilteringClient filteringClient;
     private final VulnerabilityRepository vulnerabilityRepository;
     private final VulnerabilityProducer vulnerabilityProducer;
+    private final MonitoredProductRepository monitoredProductRepository;
 
     private static final Pattern CVE_PATTERN = Pattern.compile("CVE-\\d{4}-\\d{4,7}", Pattern.CASE_INSENSITIVE);
     private static final Pattern CVSS_PATTERN = Pattern.compile("(?:CVSS|score)[:\\s]*([0-9]+\\.?[0-9]*)",
@@ -207,8 +209,10 @@ public class NormalizationService {
             product = String.join(", ", filterResult.getDetectedProducts());
         }
 
-        // 4. Relevant = known product found in title or description
-        boolean isRelevant = !product.equals("Unknown");
+        // 4. Relevant = product is in the organization's monitored product list
+        // (employees manage this list via the dashboard Products page)
+        boolean isRelevant = !product.equals("Unknown")
+                && monitoredProductRepository.existsByNameIgnoreCaseAndActiveTrue(product);
 
         // 5. Extract CVE IDs
         List<String> cveIds = filterResult.getCveIds();

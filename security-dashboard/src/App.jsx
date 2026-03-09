@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import DashboardPage from './pages/DashboardPage.jsx';
 import VulnerabilitiesPage from './pages/VulnerabilitiesPage.jsx';
+import ProductsPage from './pages/ProductsPage.jsx';
 import FeedSourcesPage from './pages/FeedSourcesPage.jsx';
 import RawEntriesPage from './pages/RawEntriesPage.jsx';
 import EurekaPage from './pages/EurekaPage.jsx';
@@ -10,6 +11,7 @@ const NAV_ITEMS = [
   { id: 'dashboard', label: 'Overview', icon: '📊', group: 'main' },
   { id: 'registry', label: 'Service Registry', icon: '🗂️', group: 'main' },
   { id: 'vulnerabilities', label: 'Vulnerabilities', icon: '🛡️', group: 'normalization' },
+  { id: 'products', label: 'Monitored Products', icon: '🏷️', group: 'normalization' },
   { id: 'feeds', label: 'Feed Sources', icon: '📡', group: 'collector' },
   { id: 'entries', label: 'Raw Entries', icon: '📄', group: 'collector' },
 ];
@@ -18,6 +20,13 @@ export default function App() {
   const [page, setPage] = useState('dashboard');
   const [health, setHealth] = useState({ rss: null, norm: null });
   const [toasts, setToasts] = useState([]);
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+
+  // Sync theme to HTML attribute so index.css picks it up
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     checkHealth().then(setHealth);
@@ -41,6 +50,7 @@ export default function App() {
       case 'dashboard': return <DashboardPage      {...props} health={health} />;
       case 'registry': return <EurekaPage          {...props} />;
       case 'vulnerabilities': return <VulnerabilitiesPage {...props} />;
+      case 'products': return <ProductsPage        {...props} />;
       case 'feeds': return <FeedSourcesPage    {...props} />;
       case 'entries': return <RawEntriesPage     {...props} />;
       default: return <DashboardPage      {...props} health={health} />;
@@ -51,6 +61,7 @@ export default function App() {
     dashboard: 'Security Overview',
     registry: 'Service Registry — Eureka',
     vulnerabilities: 'Vulnerabilities',
+    products: 'Monitored Products',
     feeds: 'RSS Feed Sources',
     entries: 'Raw Feed Entries',
   };
@@ -116,8 +127,16 @@ export default function App() {
       <div className="main-content">
         <header className="topbar">
           <h1 className="topbar-title">{pageTitles[page]}</h1>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)', alignSelf: 'center', fontFamily: 'JetBrains Mono, monospace' }}>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
+            <button
+              onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+              className="topbar-btn btn-ghost"
+              title="Toggle Light/Dark Theme"
+              style={{ fontSize: 16, padding: '4px 8px' }}
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace' }}>
               {new Date().toLocaleString()}
             </span>
           </div>

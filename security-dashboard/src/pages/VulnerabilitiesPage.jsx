@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { normApi } from '../api.js';
 
@@ -87,10 +87,18 @@ export default function VulnerabilitiesPage({ toast }) {
     const [loading, setLoading] = useState(true);
     const [sevFilter, setSevFilter] = useState('ALL');
     const [relevantOnly, setRelOnly] = useState(false);
+    // ── Product dropdown open/close ───────────────────────────────
+    const [productDropOpen, setProductDropOpen] = useState(false);
+    const productDropRef = useRef(null);
+    useEffect(() => {
+        function handler(e) { if (productDropRef.current && !productDropRef.current.contains(e.target)) setProductDropOpen(false); }
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
     const [search, setSearch] = useState('');
     const [selected, setSelected] = useState(null);
     const [stats, setStats] = useState(null);
-    const [productFilter, setProductFilter] = useState('ALL');
+    const [selectedProducts, setSelectedProducts] = useState(new Set()); // empty = all
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
 
@@ -109,20 +117,28 @@ export default function VulnerabilitiesPage({ toast }) {
 
     useEffect(() => { load(); }, [load]);
 
-    // ── Unique product list for dropdown ──────────────────────────────
-    const productOptions = ['ALL', ...Array.from(
-        new Set(allVulns
-            .map(v => v.product)
-            .filter(p => p && p !== 'Unknown')
-        )).sort()
-    ];
+    // ── Unique products + per-product counts ───────────────────────────
+    const productOptions = Array.from(
+        new Set(allVulns.map(v => v.product).filter(p => p && p !== 'Unknown'))
+    ).sort();
+
+    const productCounts = allVulns.reduce((acc, v) => {
+        if (v.product && v.product !== 'Unknown') acc[v.product] = (acc[v.product] || 0) + 1;
+        return acc;
+    }, {});
+
+    const toggleProduct = prod => setSelectedProducts(prev => {
+        const next = new Set(prev);
+        next.has(prod) ? next.delete(prod) : next.add(prod);
+        return next;
+    });
 
     // ── CLIENT-SIDE filtering ──────────────────────────────────────────
     const displayed = allVulns.filter(v => {
         const sev = (v.severity || 'LOW').toUpperCase();
         if (sevFilter !== 'ALL' && sev !== sevFilter) return false;
         if (relevantOnly && !v.isRelevant) return false;
-        if (productFilter !== 'ALL' && v.product !== productFilter) return false;
+        if (selectedProducts.size > 0 && !selectedProducts.has(v.product)) return false;
         if (dateFrom) {
             const pub = v.publishedAt ? new Date(v.publishedAt) : null;
             if (!pub || pub < new Date(dateFrom)) return false;
@@ -198,7 +214,7 @@ export default function VulnerabilitiesPage({ toast }) {
                         <button
                             key={sev}
                             className={`filter-chip ${SEV_CHIP_CLASS[sev] || ''} ${sevFilter === sev && !relevantOnly ? 'active' : ''}`}
-                            onClick={() => { setSevFilter(sev); setRelOnly(false); setSearch(''); setProductFilter('ALL'); }}
+                            onClick={() => { setSevFilter(sev); setRelOnly(false); setSearch(''); setSelectedProducts(new Set()); }}
                         >
                             {sev}
                             {sev !== 'ALL' && counts[sev]
@@ -211,27 +227,11 @@ export default function VulnerabilitiesPage({ toast }) {
                     ))}
                     <button
                         className={`filter-chip ${relevantOnly ? 'active' : ''}`}
-                        onClick={() => { setRelOnly(p => !p); setSevFilter('ALL'); setSearch(''); setProductFilter('ALL'); }}
+                        onClick={() => { setRelOnly(p => !p); setSevFilter('ALL'); setSearch(''); setSelectedProducts(new Set()); }}
                     >
                         🎯 Relevant only ({allVulns.filter(v => v.isRelevant).length})
                     </button>
                 </div>
-
-                {/* ─── Product dropdown ─── */}
-                <select
-                    value={productFilter}
-                    onChange={e => { setProductFilter(e.target.value); setSevFilter('ALL'); setRelOnly(false); setSearch(''); }}
-                    style={{
-                        background: 'var(--bg-card)', color: productFilter !== 'ALL' ? 'var(--accent-blue)' : 'var(--text-secondary)',
-                        border: `1px solid ${productFilter !== 'ALL' ? 'rgba(88,166,255,0.4)' : 'var(--border-subtle)'}`,
-                        borderRadius: 20, padding: '6px 12px', fontFamily: 'inherit',
-                        fontSize: 12, fontWeight: 500, cursor: 'pointer', outline: 'none',
-                    }}
-                >
-                    {productOptions.map(p => (
-                        <option key={p} value={p} style={{ background: 'var(--bg-secondary)' }}>{p === 'ALL' ? '🏷️ All Products' : p}</option>
-                    ))}
-                </select>
 
                 {/* ─── Date range ─── */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -270,17 +270,84 @@ export default function VulnerabilitiesPage({ toast }) {
                 </div>
 
                 <button className="topbar-btn btn-ghost" style={{ marginLeft: 'auto' }}
-                    onClick={() => { setSearch(''); setSevFilter('ALL'); setRelOnly(false); setProductFilter('ALL'); setDateFrom(''); setDateTo(''); }}>
+                    onClick={() => { setSearch(''); setSevFilter('ALL'); setRelOnly(false); setSelectedProducts(new Set()); setDateFrom(''); setDateTo(''); }}>
                     ↺ Reset
                 </button>
-            </div >
+            </div>
+
+            {/* ─── Product multi-select dropdown ─── */}
+            {productOptions.length > 0 && (
+                <div ref={productDropRef} style={{ position: 'relative' }}>
+                    <button
+                        onClick={() => setProductDropOpen(o => !o)}
+                        style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            background: selectedProducts.size > 0 ? 'rgba(88,166,255,0.12)' : 'var(--bg-card)',
+                            border: `1px solid ${selectedProducts.size > 0 ? 'rgba(88,166,255,0.4)' : 'var(--border-subtle)'}`,
+                            color: selectedProducts.size > 0 ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                            borderRadius: 20, padding: '6px 14px', fontFamily: 'inherit',
+                            fontSize: 12, fontWeight: 500, cursor: 'pointer', userSelect: 'none',
+                        }}
+                    >
+                        🏷️ {selectedProducts.size === 0
+                            ? 'All Products'
+                            : `${selectedProducts.size} Product${selectedProducts.size > 1 ? 's' : ''} selected`
+                        } {productDropOpen ? '▲' : '▼'}
+                    </button>
+
+                    {productDropOpen && (
+                        <div style={{
+                            position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 500,
+                            background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)',
+                            borderRadius: 10, minWidth: 220, maxHeight: 320, overflowY: 'auto',
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.4)', padding: '8px 0',
+                        }}>
+                            {selectedProducts.size > 0 && (
+                                <button
+                                    onClick={() => setSelectedProducts(new Set())}
+                                    style={{
+                                        display: 'block', width: '100%', textAlign: 'left',
+                                        background: 'none', border: 'none', padding: '6px 14px 10px',
+                                        fontSize: 11, color: 'var(--accent-blue)', cursor: 'pointer',
+                                        borderBottom: '1px solid var(--border-subtle)', marginBottom: 4,
+                                    }}
+                                >✕ Clear selection</button>
+                            )}
+                            {productOptions.map(prod => {
+                                const active = selectedProducts.has(prod);
+                                return (
+                                    <label key={prod} style={{
+                                        display: 'flex', alignItems: 'center', gap: 10,
+                                        padding: '7px 14px', cursor: 'pointer',
+                                        background: active ? 'rgba(88,166,255,0.08)' : 'transparent',
+                                        transition: 'background 0.12s',
+                                    }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={active}
+                                            onChange={() => toggleProduct(prod)}
+                                            style={{ accentColor: 'var(--accent-blue)', width: 14, height: 14 }}
+                                        />
+                                        <span style={{ fontSize: 13, color: active ? 'var(--text-primary)' : 'var(--text-secondary)', flex: 1 }}>
+                                            {prod}
+                                        </span>
+                                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                                            ({productCounts[prod] || 0})
+                                        </span>
+                                    </label>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* ─── Table ────────────────────────────────────────── */}
-            < div className="section-header" >
+            <div className="section-header">
                 <span className="section-title">
                     Vulnerabilities <span className="section-count">{displayed.length}</span>
                 </span>
-            </div >
+            </div>
             <div className="table-container">
                 {loading ? (
                     <div className="loading-spinner"><div className="spinner" /><span>Loading vulnerabilities…</span></div>

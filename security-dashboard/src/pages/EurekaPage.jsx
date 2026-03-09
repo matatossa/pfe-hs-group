@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 
-const EUREKA_BASE = 'http://localhost:8761';
+// Use Vite proxy to avoid CORS — see vite.config.js /eureka-proxy rule
+const EUREKA_BASE = '';
 
 // Eureka returns XML or JSON depending on Accept header
 export async function fetchEurekaApps() {
-    const res = await fetch(`${EUREKA_BASE}/eureka/apps`, {
+    const res = await fetch(`/eureka-proxy/eureka/apps`, {
         headers: { Accept: 'application/json' },
     });
     if (!res.ok) throw new Error(`Eureka HTTP ${res.status}`);

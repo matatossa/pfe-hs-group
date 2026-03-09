@@ -51,6 +51,18 @@ export const normApi = {
     getStats: () => request(`${NORM_BASE}/vulnerabilities/stats`),
 };
 
+// ─── Monitored Products ──────────────────────────────────────────
+export const productsApi = {
+    /** GET /api/products */
+    getAll: () => request(`${NORM_BASE}/products`),
+    /** POST /api/products — body: { name } */
+    add: (name) => request(`${NORM_BASE}/products`, { method: 'POST', body: JSON.stringify({ name }) }),
+    /** DELETE /api/products/{id} */
+    remove: (id) => request(`${NORM_BASE}/products/${id}`, { method: 'DELETE' }),
+    /** PUT /api/products/{id}/toggle */
+    toggle: (id) => request(`${NORM_BASE}/products/${id}/toggle`, { method: 'PUT' }),
+};
+
 // ─── Health check ────────────────────────────────────────────────
 export async function checkHealth() {
     const results = { rss: false, norm: false };
