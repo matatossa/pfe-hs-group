@@ -1,12 +1,15 @@
 package com.security.platform.normalization.service;
 
 import com.security.platform.normalization.client.FilteringClient;
+import com.security.platform.normalization.client.CertFrApiClient;
 import com.security.platform.normalization.dto.FeedItemDTO;
 import com.security.platform.normalization.dto.FilterResultDTO;
 import com.security.platform.normalization.entity.Vulnerability;
 import com.security.platform.normalization.kafka.VulnerabilityProducer;
 import com.security.platform.normalization.repository.MonitoredProductRepository;
 import com.security.platform.normalization.repository.VulnerabilityRepository;
+import com.security.platform.normalization.util.VersionComparator;
+import com.security.platform.normalization.entity.MonitoredProduct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,6 +29,7 @@ public class NormalizationService {
     private final VulnerabilityRepository vulnerabilityRepository;
     private final VulnerabilityProducer vulnerabilityProducer;
     private final MonitoredProductRepository monitoredProductRepository;
+    private final CertFrApiClient certFrApiClient;
 
     private static final Pattern CVE_PATTERN = Pattern.compile("CVE-\\d{4}-\\d{4,7}", Pattern.CASE_INSENSITIVE);
     private static final Pattern CVSS_PATTERN = Pattern.compile("(?:CVSS|score)[:\\s]*([0-9]+\\.?[0-9]*)",
@@ -220,6 +224,8 @@ public class NormalizationService {
             cveIds = extractCveIds(item.getTitle() + " " + item.getDescription());
         }
 
+        // 5.b NIST CVE enrichment is done ASYNCHRONOUSLY after save — see enrichCves()
+
         // 6. Severity (English + French keywords)
         String severity = determineSeverity(item.getTitle(), item.getDescription(), filterResult);
 
@@ -233,10 +239,57 @@ public class NormalizationService {
             return vulnerabilityRepository.findByUrl(item.getUrl()).orElse(null);
         }
 
+        boolean isVersionMatch = true;
+        String affectedSystemsStr = null;
+        List<String> finalCves = new ArrayList<>(cveIds);
+
+        if (isRelevant) {
+            MonitoredProduct mp = monitoredProductRepository.findByNameIgnoreCase(product).orElse(null);
+            String userVersion = (mp != null) ? mp.getVersion() : null;
+            List<String> extractedSystems = new ArrayList<>();
+
+            if ("CERT-FR".equalsIgnoreCase(item.getSource()) && item.getUrl() != null) {
+                CertFrApiClient.CertFrAdvisoryData data = certFrApiClient.getAdvisoryDetails(item.getUrl());
+                if (data != null) {
+                    if (data.cves() != null && !data.cves().isEmpty()) {
+                        finalCves.addAll(data.cves());
+                    }
+                    if (data.affectedSystems() != null && !data.affectedSystems().isEmpty()) {
+                        extractedSystems.addAll(data.affectedSystems());
+                    }
+                }
+                // Fallback: if CERT-FR JSON is unavailable or empty, use description text
+                if (extractedSystems.isEmpty() && item.getDescription() != null && !item.getDescription().isBlank()) {
+                    extractedSystems.add(item.getDescription());
+                }
+            } else if (item.getDescription() != null && !item.getDescription().isBlank()) {
+                // Non CERT-FR: scan description for versions
+                extractedSystems.add(item.getDescription());
+            }
+
+            if (!extractedSystems.isEmpty()) {
+                affectedSystemsStr = String.join("\n", extractedSystems);
+                if (userVersion != null && !userVersion.isBlank()) {
+                    // New semantics: assume NOT affected unless at least one
+                    // affected system text indicates the user's version may be vulnerable.
+                    boolean possiblyAffected = false;
+                    for (String sys : extractedSystems) {
+                        if (VersionComparator.isAffected(userVersion, sys)) {
+                            possiblyAffected = true;
+                            break;
+                        }
+                    }
+                    isVersionMatch = possiblyAffected;
+                }
+            }
+        }
+
+        finalCves = finalCves.stream().distinct().toList();
+
         Vulnerability vulnerability = Vulnerability.builder()
                 .source(item.getSource())
                 .product(product)
-                .cveId(cveIds.isEmpty() ? null : String.join(", ", cveIds))
+                .cveId(finalCves.isEmpty() ? null : String.join(", ", finalCves))
                 .title(item.getTitle())
                 .description(item.getDescription())
                 .severity(severity)
@@ -245,19 +298,24 @@ public class NormalizationService {
                 .publishedAt(item.getPublishedAt() != null ? item.getPublishedAt() : LocalDateTime.now())
                 .fetchedAt(LocalDateTime.now())
                 .isRelevant(isRelevant)
+                .isVersionMatch(isVersionMatch)
+                .affectedSystems(affectedSystemsStr)
                 .relevanceScore(BigDecimal.valueOf(filterResult.getRelevanceScore()))
                 .rawData(item.toString())
                 .build();
 
         Vulnerability saved = vulnerabilityRepository.save(vulnerability);
-        log.info("Saved: id={}, product='{}', cve={}, severity={}, relevant={}",
-                saved.getId(), saved.getProduct(), saved.getCveId(), saved.getSeverity(), saved.getIsRelevant());
+        log.info("Saved: id={}, product='{}', cve={}, severity={}, relevant={}, versionMatch={}",
+                saved.getId(), saved.getProduct(), saved.getCveId(), saved.getSeverity(), saved.getIsRelevant(),
+                saved.getIsVersionMatch());
 
         if (isRelevant) {
             vulnerabilityProducer.publish(saved);
         }
         return saved;
     }
+
+    // Old NVD enrichment method has been removed permanently.
 
     public List<Vulnerability> normalizeBatch(List<FeedItemDTO> items) {
         log.info("Normalizing batch of {} items", items.size());

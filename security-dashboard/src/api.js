@@ -55,8 +55,10 @@ export const normApi = {
 export const productsApi = {
     /** GET /api/products */
     getAll: () => request(`${NORM_BASE}/products`),
-    /** POST /api/products — body: { name } */
-    add: (name) => request(`${NORM_BASE}/products`, { method: 'POST', body: JSON.stringify({ name }) }),
+    /** POST /api/products — body: { name, version } */
+    add: (name, version) => request(`${NORM_BASE}/products`, { method: 'POST', body: JSON.stringify({ name, version }) }),
+    /** PUT /api/products/{id} — update (currently only version) */
+    update: (id, updates) => request(`${NORM_BASE}/products/${id}`, { method: 'PUT', body: JSON.stringify(updates) }),
     /** DELETE /api/products/{id} */
     remove: (id) => request(`${NORM_BASE}/products/${id}`, { method: 'DELETE' }),
     /** PUT /api/products/{id}/toggle */

@@ -5,6 +5,8 @@ export default function ProductsPage({ toast }) {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [newName, setNewName] = useState('');
+    const [newVersion, setNewVersion] = useState('');
+    const [updatingId, setUpdatingId] = useState(null);
     const [search, setSearch] = useState('');
     const [adding, setAdding] = useState(false);
 
@@ -27,8 +29,9 @@ export default function ProductsPage({ toast }) {
         if (!newName.trim()) return;
         setAdding(true);
         try {
-            await productsApi.add(newName.trim());
+            await productsApi.add(newName.trim(), newVersion.trim());
             setNewName('');
+            setNewVersion('');
             await load();
             toast(`Added "${newName.trim()}" to monitored products`, 'success');
         } catch (err) {
@@ -56,6 +59,24 @@ export default function ProductsPage({ toast }) {
             toast(`${p.name} is now ${p.active ? 'disabled' : 'enabled'}`, 'info');
         } catch (err) {
             toast('Failed to toggle: ' + err.message, 'error');
+        }
+    }
+
+    async function handleEditVersion(p) {
+        const current = p.version || '';
+        const next = prompt(`Set version for "${p.name}" (leave empty for any version):`, current);
+        if (next === null) return;
+        const trimmed = next.trim();
+
+        setUpdatingId(p.id);
+        try {
+            await productsApi.update(p.id, { version: trimmed || null });
+            await load();
+            toast(`Updated version for "${p.name}"`, 'success');
+        } catch (err) {
+            toast('Failed to update version: ' + err.message, 'error');
+        } finally {
+            setUpdatingId(null);
         }
     }
 
@@ -103,6 +124,16 @@ export default function ProductsPage({ toast }) {
                         placeholder="e.g. Ubuntu, Google Chrome, Cisco…"
                         value={newName}
                         onChange={e => setNewName(e.target.value)}
+                        disabled={adding}
+                    />
+                </div>
+                <div className="search-bar" style={{ flex: '1 1 120px', maxWidth: 200 }}>
+                    <span className="search-icon">v</span>
+                    <input
+                        className="search-input"
+                        placeholder="Version (optional)..."
+                        value={newVersion}
+                        onChange={e => setNewVersion(e.target.value)}
                         disabled={adding}
                     />
                 </div>
@@ -155,6 +186,7 @@ export default function ProductsPage({ toast }) {
                             <tr>
                                 <th>Status</th>
                                 <th>Product Name</th>
+                                <th>Version</th>
                                 <th>Date Added</th>
                                 <th style={{ textAlign: 'right' }}>Actions</th>
                             </tr>
@@ -170,6 +202,9 @@ export default function ProductsPage({ toast }) {
                                     <td style={{ fontWeight: 600, color: p.active ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
                                         {p.name}
                                     </td>
+                                    <td style={{ color: p.version ? 'var(--accent-blue)' : 'var(--text-muted)', fontFamily: p.version ? 'monospace' : 'inherit' }}>
+                                        {p.version || 'Any'}
+                                    </td>
                                     <td style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                                         {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '—'}
                                     </td>
@@ -180,6 +215,15 @@ export default function ProductsPage({ toast }) {
                                             style={{ marginRight: 8, padding: '4px 10px', fontSize: 13, color: p.active ? 'var(--severity-medium)' : 'var(--accent-green)' }}
                                         >
                                             {p.active ? '⏸️ Disable' : '▶️ Enable'}
+                                        </button>
+                                        <button
+                                            className="topbar-btn btn-ghost"
+                                            onClick={() => handleEditVersion(p)}
+                                            disabled={updatingId === p.id}
+                                            style={{ marginRight: 8, padding: '4px 10px', fontSize: 13, color: 'var(--accent-blue)' }}
+                                            title="Edit version"
+                                        >
+                                            {updatingId === p.id ? '…' : '✏️ Version'}
                                         </button>
                                         <button
                                             className="topbar-btn btn-ghost"

@@ -32,8 +32,15 @@ function VulnDetailModal({ vuln, onClose }) {
                         </div>
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                             <span className={`severity-badge sev-${sev}`}>{sev}</span>
-                            {vuln.cveId && <span className="cve-tag">{vuln.cveId}</span>}
+                            {vuln.cveId ? (
+                                vuln.cveId.split(',').map(cve => cve.trim()).map(cve => (
+                                    <span key={cve} className="cve-tag">{cve}</span>
+                                ))
+                            ) : (
+                                <span className="cve-tag" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)', border: '1px solid var(--border-muted)' }}>None</span>
+                            )}
                             {vuln.isRelevant && <span className="status-badge status-relevant">✓ Relevant</span>}
+                            {vuln.isVersionMatch === false && <span className="status-badge" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>Version Safe</span>}
                         </div>
                     </div>
 
@@ -87,6 +94,7 @@ export default function VulnerabilitiesPage({ toast }) {
     const [loading, setLoading] = useState(true);
     const [sevFilter, setSevFilter] = useState('ALL');
     const [relevantOnly, setRelOnly] = useState(false);
+    const [versionMatchOnly, setVersionMatchOnly] = useState(false);
     // ── Product dropdown open/close ───────────────────────────────
     const [productDropOpen, setProductDropOpen] = useState(false);
     const productDropRef = useRef(null);
@@ -138,6 +146,7 @@ export default function VulnerabilitiesPage({ toast }) {
         const sev = (v.severity || 'LOW').toUpperCase();
         if (sevFilter !== 'ALL' && sev !== sevFilter) return false;
         if (relevantOnly && !v.isRelevant) return false;
+        if (versionMatchOnly && v.isVersionMatch === false) return false;
         if (selectedProducts.size > 0 && !selectedProducts.has(v.product)) return false;
         if (dateFrom) {
             const pub = v.publishedAt ? new Date(v.publishedAt) : null;
@@ -204,7 +213,7 @@ export default function VulnerabilitiesPage({ toast }) {
                         className="search-input"
                         placeholder="Search title / CVE / product…"
                         value={search}
-                        onChange={e => { setSearch(e.target.value); setSevFilter('ALL'); setRelOnly(false); }}
+                        onChange={e => { setSearch(e.target.value); setSevFilter('ALL'); setRelOnly(false); setVersionMatchOnly(false); }}
                     />
                 </div>
 
@@ -230,6 +239,13 @@ export default function VulnerabilitiesPage({ toast }) {
                         onClick={() => { setRelOnly(p => !p); setSevFilter('ALL'); setSearch(''); setSelectedProducts(new Set()); }}
                     >
                         🎯 Relevant only ({allVulns.filter(v => v.isRelevant).length})
+                    </button>
+                    <button
+                        className={`filter-chip ${versionMatchOnly ? 'active' : ''}`}
+                        onClick={() => { setVersionMatchOnly(p => !p); setSevFilter('ALL'); setSearch(''); setSelectedProducts(new Set()); }}
+                        style={{ borderColor: versionMatchOnly ? 'var(--accent-blue)' : 'var(--border-subtle)', color: versionMatchOnly ? 'var(--accent-blue)' : 'var(--text-secondary)' }}
+                    >
+                        ⚡ Version Match Only ({allVulns.filter(v => v.isVersionMatch !== false).length})
                     </button>
                 </div>
 
@@ -270,7 +286,7 @@ export default function VulnerabilitiesPage({ toast }) {
                 </div>
 
                 <button className="topbar-btn btn-ghost" style={{ marginLeft: 'auto' }}
-                    onClick={() => { setSearch(''); setSevFilter('ALL'); setRelOnly(false); setSelectedProducts(new Set()); setDateFrom(''); setDateTo(''); }}>
+                    onClick={() => { setSearch(''); setSevFilter('ALL'); setRelOnly(false); setVersionMatchOnly(false); setSelectedProducts(new Set()); setDateFrom(''); setDateTo(''); }}>
                     ↺ Reset
                 </button>
             </div>
@@ -378,9 +394,15 @@ export default function VulnerabilitiesPage({ toast }) {
                                             <span className={`severity-badge sev-${sev}`}>{sev}</span>
                                         </td>
                                         <td>
-                                            {v.cveId
-                                                ? <span className="cve-tag">{v.cveId}</span>
-                                                : <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>}
+                                            {v.cveId ? (
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                                    {v.cveId.split(',').map(cve => cve.trim()).map(cve => (
+                                                        <span key={cve} className="cve-tag" style={{ padding: '2px 6px', fontSize: 10 }}>{cve}</span>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <span style={{ color: 'var(--text-muted)', fontSize: 12, fontStyle: 'italic' }}>None</span>
+                                            )}
                                         </td>
                                         <td style={{ maxWidth: 380 }}>
                                             <div style={{ fontSize: 13, lineHeight: 1.45, whiteSpace: 'normal', wordBreak: 'break-word' }}>
@@ -400,8 +422,11 @@ export default function VulnerabilitiesPage({ toast }) {
                                         <td style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{v.source || '—'}</td>
                                         <td>
                                             {v.isRelevant
-                                                ? <span style={{ color: 'var(--accent-green)', fontSize: 13 }}>✓</span>
-                                                : <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>—</span>}
+                                                ? <span style={{ color: 'var(--accent-green)', fontSize: 13, display: 'block' }}>✓</span>
+                                                : <span style={{ color: 'var(--text-muted)', fontSize: 13, display: 'block' }}>—</span>}
+                                            {v.isVersionMatch === false && (
+                                                <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Safe</span>
+                                            )}
                                         </td>
                                         <td style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'JetBrains Mono, monospace', whiteSpace: 'nowrap' }}>
                                             {v.publishedAt ? new Date(v.publishedAt).toLocaleDateString() : '—'}

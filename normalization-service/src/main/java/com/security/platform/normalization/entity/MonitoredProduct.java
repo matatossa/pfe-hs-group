@@ -20,6 +20,9 @@ public class MonitoredProduct {
     @Column(nullable = false, unique = true, length = 100)
     private String name;
 
+    @Column(name = "version")
+    private String version;
+
     @Column(nullable = false)
     @Builder.Default
     private boolean active = true;
